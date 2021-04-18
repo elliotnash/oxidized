@@ -19,11 +19,9 @@ version = "0.1"
 features = ["log"]
 
 [dependencies.reqwest]
-default-features = false
 features = ["json"]
 version = "0.11"
 
 [dependencies.tokio]
 version = "1"
-default-features = true
-features = ["fs", "macros", "rt", "sync", "time"]
+features = ["fs", "macros", "rt-multi-thread"]
