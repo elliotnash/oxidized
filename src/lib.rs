@@ -1,19 +1,23 @@
 use tracing::{info, debug};
 
 mod http;
-use http::HttpClient;
+use http::{HttpClient, models::ClientUser};
 
 const BASE_URL: &str = "https://www.guilded.gg/api";
 const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
 
 pub struct Client {
-    http: HttpClient
+    http: HttpClient,
+    client_user: ClientUser
 }
 
 impl Client {
 
     pub async fn login(email: &str, password: &str) -> Self {
-        Client{http: HttpClient::login(email, password).await}
+        let (http, client_user) = HttpClient::login(email, password).await;
+        let client = Client{http, client_user};
+        info!("Connected to guilded.gg!");
+        client
     }
 
     pub async fn run(&self) {

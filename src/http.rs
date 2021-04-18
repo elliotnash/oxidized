@@ -19,7 +19,11 @@ use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use crate::{BASE_URL, WS_URL};
 
 pub mod models;
-use models::connection::Credentials;
+use models::{
+    Credentials,
+    ClientUser,
+    ClientUserRoot
+};
 
 
 
@@ -31,7 +35,7 @@ pub struct HttpClient {
 
 impl HttpClient {
 
-    pub(crate) async fn login(email: &str, password: &str) -> Self {
+    pub(crate) async fn login(email: &str, password: &str) -> (Self, ClientUser) {
         let http_client = reqwest::ClientBuilder::new()
             .cookie_store(true).build().unwrap();
 
@@ -42,7 +46,7 @@ impl HttpClient {
             Ok(response) => {
                 match response.status() {
                     StatusCode::OK => {
-                        info!("Logged in to guilded.gg!");
+                        debug!("Received response from /api/login");
                     }
                     StatusCode::BAD_REQUEST => {
                         panic!("Invalid login credentials");
@@ -65,7 +69,8 @@ impl HttpClient {
             }
         };
 
-        let cookies = response.headers().get("Set-Cookie").expect("Invalid response from server");
+        let cookies = response.headers().get("Set-Cookie").expect("Invalid response from server").clone();
+        let client_user = response.json::<ClientUserRoot>().await.expect("Invalid response from server").user;
 
         let (ws_stream, _) = async_tungstenite::tokio::connect_async_with_config(
             Request::builder().uri(WS_URL).header("cookie", cookies).body(()).unwrap(),
@@ -78,7 +83,7 @@ impl HttpClient {
         ).await.unwrap();
 
         let (ws_sink, ws_stream) = ws_stream.split();
-        HttpClient{http_client, ws_stream: RwLock::new(ws_stream), ws_sink: RwLock::new(ws_sink)}
+        (HttpClient{http_client, ws_stream: RwLock::new(ws_stream), ws_sink: RwLock::new(ws_sink)}, client_user)
 
     }
 
