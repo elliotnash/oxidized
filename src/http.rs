@@ -16,6 +16,8 @@ use async_tungstenite::{
     }
 };
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
+use regex::Regex;
+use lazy_static::lazy_static;
 use crate::{BASE_URL, WS_URL};
 
 pub mod models;
@@ -108,13 +110,30 @@ impl HttpClient {
     async fn event_handler(&self) {
         loop{
             if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
-                if msg == "3" {
-                    debug!("Server heartbeat received");
-                } else {
-                    info!("Received: {:?}", msg);
+                let rm = RawMessage::from_raw(&msg);
+                match rm.code {
+                    3 => debug!("Server heartbeat received"),
+                    _ => info!("Received code: {}, message: {}", rm.code, rm.json)
                 }
             }
         }
     }
 
+}
+
+
+struct RawMessage {
+    pub code: i32,
+    pub json: String
+}
+impl RawMessage {
+    fn from_raw(raw_string: &str) -> Self {
+        lazy_static! {
+            static ref RMRE: Regex = Regex::new("^[0-9]*").unwrap();
+        }
+        let (code, end_index) = RMRE.find(raw_string).map_or((-1, 0), 
+            |m| (m.as_str().parse::<i32>().unwrap_or(-1), m.end()));
+        
+        RawMessage{code, json: (&raw_string[end_index..]).to_string()}
+    }
 }
