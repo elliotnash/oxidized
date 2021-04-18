@@ -85,14 +85,25 @@ impl Client {
 
     pub async fn run(&self) {
         info!("Connected to guilded.gg");
-        let mut last_ping = Instant::now();
+        let both = future::join(self.heartbeat(), self.event_handler());
+        both.await;
+    }
+
+    async fn heartbeat(&self) {
         loop{
-            if last_ping.elapsed().as_secs() >= 2 {
-                self.ws_sink.write().await.send(Message::text("2")).await.unwrap();
-                last_ping = Instant::now();
-            }
+            self.ws_sink.write().await.send(Message::text("2")).await.unwrap();
+            sleep(Duration::from_millis(25000)).await;
+        }
+    }
+
+    async fn event_handler(&self) {
+        loop{
             if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
-                info!("Received: {:?}", msg);
+                if msg == "3" {
+                    debug!("Server heartbeat received");
+                } else {
+                    info!("Received: {:?}", msg);
+                }
             }
         }
     }
