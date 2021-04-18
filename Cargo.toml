@@ -7,3 +7,23 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = "1"
+async-trait = "0.1.9"
+
+[dependencies.serde]
+version = "1.0.103"
+features = ["derive"]
+
+[dependencies.tracing]
+version = "0.1"
+features = ["log"]
+
+[dependencies.reqwest]
+default-features = false
+features = ["json"]
+version = "0.11"
+
+[dependencies.tokio]
+version = "1"
+default-features = true
+features = ["fs", "macros", "rt", "sync", "time"]
