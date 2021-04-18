@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "examples/e01_ping_bot"
+		}
+	],
+	"settings": {}
+}
