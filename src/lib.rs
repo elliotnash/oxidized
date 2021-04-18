@@ -1,6 +1,6 @@
 use tokio::{
     net::TcpStream,
-    time::{sleep, Duration}
+    time::{sleep, Duration, Instant}
 };
 use tokio_native_tls::TlsStream;
 use tracing::{info, debug};
@@ -14,7 +14,7 @@ use async_tungstenite::{
         handshake::client::Request
     }
 };
-use futures::prelude::*;
+use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 
 mod http;
 use http::models::connection::Credentials;
@@ -24,7 +24,8 @@ const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transp
 
 pub struct Client {
     http_client: reqwest::Client,
-    ws_stream: WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>
+    ws_stream: SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>,
+    ws_sink: SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>
 }
 
 impl Client {
@@ -85,18 +86,21 @@ impl Client {
         //         stream.send(Message::text("2")).await.unwrap();
         //     }
         // }
-
-        Client{http_client, ws_stream}
+        let (ws_sink, ws_stream) = ws_stream.split();
+        Client{http_client, ws_stream, ws_sink}
     }
 
     pub async fn run(&mut self) {
         info!("Connected to guilded.gg");
+        let mut last_ping = Instant::now();
         loop{
-            self.ws_stream.send(Message::text("2")).await.unwrap();
+            if last_ping.elapsed().as_secs() >= 2 {
+                self.ws_sink.send(Message::text("2")).await.unwrap();
+                last_ping = Instant::now();
+            }
             if let Some(Ok(Message::Text(msg))) = self.ws_stream.next().await {
                 info!("Received: {:?}", msg);
             }
-            sleep(Duration::from_secs(2)).await;
         }
     }
 
