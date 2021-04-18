@@ -2,18 +2,18 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct Credentials {
+pub struct Credentials {
     pub email: String,
     pub password: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct ClientUserRoot {
+pub struct ClientUserRoot {
     pub user: ClientUser
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ClientUser {
+pub struct ClientUser {
     pub id: String,
     pub name: String,
     pub subdomain: Option<String>,
@@ -33,7 +33,7 @@ pub(crate) struct ClientUser {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Hello {
+pub struct Hello {
     pub sid: String,
     pub upgrades: Vec<String>,
     pub ping_interval: i32,

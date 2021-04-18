@@ -7,8 +7,8 @@ const BASE_URL: &str = "https://www.guilded.gg/api";
 const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
 
 pub struct Client {
-    http: HttpClient,
-    client_user: ClientUser
+    pub http: HttpClient,
+    pub client_user: ClientUser
 }
 
 impl Client {
