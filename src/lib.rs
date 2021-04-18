@@ -1,20 +1,23 @@
-use lazy_static::lazy_static;
 use tracing::{info, debug};
-use reqwest::{Client, StatusCode};
+use reqwest::StatusCode;
 
 mod http;
 use http::models::connection::Credentials;
 
 const BASE_URL: &str = "https://www.guilded.gg/api";
 
-lazy_static!{
-    pub static ref HTTP_CLIENT: Client = reqwest::ClientBuilder::new()
-        .cookie_store(true).build().unwrap();
+pub struct Client {
+    client: reqwest::Client
 }
 
-pub async fn login(email: &str, password: &str){
+pub async fn login(email: &str, password: &str) {
 
-    let result = HTTP_CLIENT.post(format!("{}/login", BASE_URL))
+    let client = Client{
+        client: reqwest::ClientBuilder::new()
+            .cookie_store(true).build().unwrap()
+    };
+
+    let result = client.client.post(format!("{}/login", BASE_URL))
         .json(&Credentials{email: email.to_string(), password: password.to_string()}).send().await;
     
     match result {
@@ -40,4 +43,8 @@ pub async fn login(email: &str, password: &str){
             }
         }
     };
+}
+
+pub async fn connect() {
+
 }
