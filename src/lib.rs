@@ -1,6 +1,19 @@
+use tokio::{
+    net::TcpStream,
+    time::{sleep, Duration}
+};
+use tokio_native_tls::TlsStream;
 use tracing::{info, debug};
 use reqwest::StatusCode;
-use async_tungstenite::tungstenite::{Message, handshake::client::Request};
+use async_tungstenite::{
+    WebSocketStream, 
+    stream::Stream, 
+    tokio::TokioAdapter, 
+    tungstenite::{
+        Message, 
+        handshake::client::Request
+    }
+};
 use futures::prelude::*;
 
 mod http;
@@ -10,7 +23,8 @@ const BASE_URL: &str = "https://www.guilded.gg/api";
 const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
 
 pub struct Client {
-    http_client: reqwest::Client
+    http_client: reqwest::Client,
+    ws_stream: WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>
 }
 
 impl Client {
@@ -52,7 +66,7 @@ impl Client {
         let cookies: Vec<reqwest::cookie::Cookie> = response.cookies().collect();
         let auth_token = cookies[0].value();
 
-        let (mut stream, resp) = async_tungstenite::tokio::connect_async_with_config(
+        let (mut ws_stream, resp) = async_tungstenite::tokio::connect_async_with_config(
             Request::builder().uri(WS_URL).header("cookie", auth_token).body(()).unwrap(),
             Some(async_tungstenite::tungstenite::protocol::WebSocketConfig{
                 accept_unmasked_frames: false,
@@ -62,19 +76,28 @@ impl Client {
             }),
         ).await.unwrap();
 
-        dbg!(resp);
+        // info!("sending heartbeat");
+        // stream.send(Message::text("ping")).await.unwrap();
 
-        let text = "Hello, World!";
-        println!("Sending: \"{}\"", text);
-        stream.send(Message::text(text)).await.unwrap();
+        // loop{
+        //     if let Some(Ok(Message::Text(msg))) = stream.next().await {
+        //         info!("Received: {:?}", msg);
+        //         stream.send(Message::text("2")).await.unwrap();
+        //     }
+        // }
 
-        let msg = stream.next().await.ok_or("didn't receive anything").unwrap().unwrap();
-        println!("Received: {:?}", msg);
-
-        Client{http_client}
+        Client{http_client, ws_stream}
     }
 
-    pub async fn connect(&self) {
+    pub async fn run(&mut self) {
         info!("Connected to guilded.gg");
+        loop{
+            self.ws_stream.send(Message::text("2")).await.unwrap();
+            if let Some(Ok(Message::Text(msg))) = self.ws_stream.next().await {
+                info!("Received: {:?}", msg);
+            }
+            sleep(Duration::from_secs(2)).await;
+        }
     }
+
 }
