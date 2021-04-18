@@ -8,10 +8,10 @@ edition = "2018"
 
 [dependencies]
 serde_json = "1"
-async-trait = "0.1.9"
+async-trait = "0.1"
 
 [dependencies.serde]
-version = "1.0.103"
+version = "1.0"
 features = ["derive"]
 
 [dependencies.tracing]
