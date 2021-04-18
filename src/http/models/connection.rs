@@ -7,8 +7,7 @@ pub struct Credentials {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct LoginResult {
-    ssh_port: Option<String>,
-    mosh_ports: Option<String>,
-    server: Option<String>
+    pub set_cookie: String
 }

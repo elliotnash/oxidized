@@ -1,30 +1,33 @@
+use lazy_static::lazy_static;
 use tracing::{info, debug};
-use reqwest::StatusCode;
+use reqwest::{Client, StatusCode};
 
 mod http;
 use http::models::connection::Credentials;
 
 const BASE_URL: &str = "https://www.guilded.gg/api";
 
-pub async fn connect(email: &str, password: &str){
+lazy_static!{
+    pub static ref HTTP_CLIENT: Client = reqwest::ClientBuilder::new()
+        .cookie_store(true).build().unwrap();
+}
 
-    let client = reqwest::Client::new();
+pub async fn login(email: &str, password: &str){
 
-    let result = client.post(format!("{}/login", BASE_URL))
+    let result = HTTP_CLIENT.post(format!("{}/login", BASE_URL))
         .json(&Credentials{email: email.to_string(), password: password.to_string()}).send().await;
     
-    let something = match result {
+    match result {
         Ok(response) => {
             match response.status() {
                 StatusCode::OK => {
-                    info!("Connect to guilded.gg!");
+                    info!("Logged in to guilded.gg!");
                 }
                 StatusCode::BAD_REQUEST => {
                     panic!("Invalid login credentials");
                 }
                 _ => {}
-            }
-            response
+            };
         }
         Err(error) => {
             debug!("Connection error:\n{}", error);
@@ -37,5 +40,4 @@ pub async fn connect(email: &str, password: &str){
             }
         }
     };
-    dbg!(something);
 }
