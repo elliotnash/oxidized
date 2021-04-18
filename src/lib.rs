@@ -1,4 +1,5 @@
 use tokio::{
+    sync::RwLock,
     net::TcpStream,
     time::{sleep, Duration, Instant}
 };
@@ -24,8 +25,8 @@ const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transp
 
 pub struct Client {
     http_client: reqwest::Client,
-    ws_stream: SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>,
-    ws_sink: SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>
+    ws_stream: RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>>,
+    ws_sink: RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>>
 }
 
 impl Client {
@@ -67,7 +68,7 @@ impl Client {
         let cookies: Vec<reqwest::cookie::Cookie> = response.cookies().collect();
         let auth_token = cookies[0].value();
 
-        let (mut ws_stream, resp) = async_tungstenite::tokio::connect_async_with_config(
+        let (ws_stream, _) = async_tungstenite::tokio::connect_async_with_config(
             Request::builder().uri(WS_URL).header("cookie", auth_token).body(()).unwrap(),
             Some(async_tungstenite::tungstenite::protocol::WebSocketConfig{
                 accept_unmasked_frames: false,
@@ -77,28 +78,20 @@ impl Client {
             }),
         ).await.unwrap();
 
-        // info!("sending heartbeat");
-        // stream.send(Message::text("ping")).await.unwrap();
-
-        // loop{
-        //     if let Some(Ok(Message::Text(msg))) = stream.next().await {
-        //         info!("Received: {:?}", msg);
-        //         stream.send(Message::text("2")).await.unwrap();
-        //     }
-        // }
         let (ws_sink, ws_stream) = ws_stream.split();
-        Client{http_client, ws_stream, ws_sink}
+        Client{http_client, ws_stream: RwLock::new(ws_stream), ws_sink: RwLock::new(ws_sink)}
+
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&self) {
         info!("Connected to guilded.gg");
         let mut last_ping = Instant::now();
         loop{
             if last_ping.elapsed().as_secs() >= 2 {
-                self.ws_sink.send(Message::text("2")).await.unwrap();
+                self.ws_sink.write().await.send(Message::text("2")).await.unwrap();
                 last_ping = Instant::now();
             }
-            if let Some(Ok(Message::Text(msg))) = self.ws_stream.next().await {
+            if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
                 info!("Received: {:?}", msg);
             }
         }
