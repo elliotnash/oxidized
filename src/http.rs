@@ -1,3 +1,4 @@
+use serde_json::Value;
 use tokio::{
     sync::RwLock,
     net::TcpStream,
@@ -21,7 +22,7 @@ use lazy_static::lazy_static;
 use crate::{BASE_URL, WS_URL};
 
 pub mod models;
-use models::{ClientUser, ClientUserRoot, Credentials, Hello};
+use models::{ClientUser, ClientUserRoot, ChatMessageCreated, Credentials, EventType, Hello};
 
 
 
@@ -95,7 +96,7 @@ impl HttpClient {
 
         let both = future::join(
             self.heartbeat(hello.ping_interval), 
-            self.event_handler()
+            self.event_listener()
         );
         both.await;
     }
@@ -107,14 +108,29 @@ impl HttpClient {
         }
     }
 
-    async fn event_handler(&self) {
+    async fn event_listener(&self) {
         loop{
             if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
                 let rm = RawMessage::from_raw(&msg);
                 match rm.code {
                     3 => debug!("Server heartbeat received"),
-                    _ => info!("Received code: {}, message: {}", rm.code, rm.json)
+                    42 => {
+                        if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
+                            self.event_handler(event_type, event).await;
+                        } else {
+                            info!("Received unkown event, message: {}", rm.json)
+                        }
+                    },
+                    _ => info!("Received unkown code: {}, message: {}", rm.code, rm.json)
                 }
+            }
+        }
+    }
+
+    async fn event_handler(&self, event_type: EventType, event: Value) {
+        match event_type {
+            EventType::ChatMessageCreated => {
+                let event = serde_json::from_value::<ChatMessageCreated>(event).unwrap();
             }
         }
     }

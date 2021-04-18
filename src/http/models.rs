@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Credentials {
@@ -38,4 +39,28 @@ pub struct Hello {
     pub upgrades: Vec<String>,
     pub ping_interval: i32,
     pub ping_timeout: i32
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum EventType {
+    ChatMessageCreated
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessageCreated {
+    pub channel_category_id: i32,
+    pub channel_id: String,
+    //TODO channel_type enum
+    pub channel_type: String,
+    pub content_id: String,
+    //TODO content_type enum
+    pub content_type: String,
+    pub created_at: DateTime<Utc>,
+    //TODO userID struct
+    pub created_by: String,
+    pub guilded_client_id: String,
+    //TODO message struct
+    pub message: Value,
+    pub team_id: String
 }
