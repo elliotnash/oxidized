@@ -30,3 +30,12 @@ pub(crate) struct ClientUser {
     pub about_info: Option<String>,
     pub last_online: DateTime<Utc>
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Hello {
+    pub sid: String,
+    pub upgrades: Vec<String>,
+    pub ping_interval: i32,
+    pub ping_timeout: i32
+}

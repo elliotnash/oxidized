@@ -19,11 +19,7 @@ use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use crate::{BASE_URL, WS_URL};
 
 pub mod models;
-use models::{
-    Credentials,
-    ClientUser,
-    ClientUserRoot
-};
+use models::{ClientUser, ClientUserRoot, Credentials, Hello};
 
 
 
@@ -88,15 +84,24 @@ impl HttpClient {
     }
 
     pub(crate) async fn run(&self) {
+        let hello_text = &self.ws_stream.write().await.next().await
+            .expect("Invalid acknowledgement packet")
+            .expect("Invalid acknowledgement packet").into_text()
+            .expect("Invalid acknowledgement packet")[1..];
+        let hello = serde_json::from_str::<Hello>(hello_text).expect("Invalid acknowledgement packet");
         info!("Connected to guilded.gg");
-        let both = future::join(self.heartbeat(), self.event_handler());
+
+        let both = future::join(
+            self.heartbeat(hello.ping_interval), 
+            self.event_handler()
+        );
         both.await;
     }
 
-    async fn heartbeat(&self) {
+    async fn heartbeat(&self, ping_interval: i32) {
         loop{
             self.ws_sink.write().await.send(Message::text("2")).await.unwrap();
-            sleep(Duration::from_millis(25000)).await;
+            sleep(Duration::from_millis(ping_interval as u64)).await;
         }
     }
 
