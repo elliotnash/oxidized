@@ -65,11 +65,10 @@ impl Client {
             }
         };
 
-        let cookies: Vec<reqwest::cookie::Cookie> = response.cookies().collect();
-        let auth_token = cookies[0].value();
+        let cookies = response.headers().get("Set-Cookie").expect("Invalid response from server");
 
         let (ws_stream, _) = async_tungstenite::tokio::connect_async_with_config(
-            Request::builder().uri(WS_URL).header("cookie", auth_token).body(()).unwrap(),
+            Request::builder().uri(WS_URL).header("cookie", cookies).body(()).unwrap(),
             Some(async_tungstenite::tungstenite::protocol::WebSocketConfig{
                 accept_unmasked_frames: false,
                 max_message_size: None,
