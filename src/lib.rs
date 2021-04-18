@@ -1,5 +1,6 @@
 use tracing::{info, debug};
 use reqwest::StatusCode;
+use async_tungstenite::tungstenite::handshake::client::Request;
 
 mod http;
 use http::models::connection::Credentials;
@@ -49,6 +50,16 @@ impl Client {
 
         let cookies: Vec<reqwest::cookie::Cookie> = response.cookies().collect();
         let auth_token = cookies[0].value();
+
+        let (stream, _) = async_tungstenite::tokio::connect_async_with_config(
+            Request::builder().uri(WS_URL).header("cookie", auth_token).body(()).unwrap(),
+            Some(async_tungstenite::tungstenite::protocol::WebSocketConfig{
+                accept_unmasked_frames: false,
+                max_message_size: None,
+                max_frame_size: None,
+                max_send_queue: None,
+            }),
+        ).await.unwrap();
 
         Client{http_client}
     }
