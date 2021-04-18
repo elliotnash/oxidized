@@ -5,23 +5,22 @@ mod http;
 use http::models::connection::Credentials;
 
 const BASE_URL: &str = "https://www.guilded.gg/api";
+const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
 
 pub struct Client {
-    client: reqwest::Client
+    http_client: reqwest::Client
 }
 
 impl Client {
 
     pub async fn login(email: &str, password: &str) -> Self {
-        let client = Client{
-            client: reqwest::ClientBuilder::new()
-                .cookie_store(true).build().unwrap()
-        };
+        let http_client = reqwest::ClientBuilder::new()
+            .cookie_store(true).build().unwrap();
 
-        let result = client.client.post(format!("{}/login", BASE_URL))
+        let result = http_client.post(format!("{}/login", BASE_URL))
             .json(&Credentials{email: email.to_string(), password: password.to_string()}).send().await;
         
-        match result {
+        let response = match result {
             Ok(response) => {
                 match response.status() {
                     StatusCode::OK => {
@@ -30,8 +29,11 @@ impl Client {
                     StatusCode::BAD_REQUEST => {
                         panic!("Invalid login credentials");
                     }
-                    _ => {}
+                    code => {
+                        panic!("Connection to guilded returned: {}", code);
+                    }
                 };
+                response
             }
             Err(error) => {
                 debug!("Connection error:\n{}", error);
@@ -44,7 +46,11 @@ impl Client {
                 }
             }
         };
-        client
+
+        let cookies: Vec<reqwest::cookie::Cookie> = response.cookies().collect();
+        let auth_token = cookies[0].value();
+
+        Client{http_client}
     }
 
     pub async fn connect(&self) {
