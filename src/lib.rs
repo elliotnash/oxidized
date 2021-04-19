@@ -16,7 +16,7 @@ impl Client {
     pub async fn login(email: &str, password: &str) -> Self {
         let (http, client_user) = HttpClient::login(email, password).await;
         let client = Client{http, client_user};
-        info!("Connected to guilded.gg!");
+        info!("Logged in to guilded.gg!");
         client
     }
 

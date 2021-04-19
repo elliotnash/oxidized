@@ -18,7 +18,7 @@ pub struct ClientUser {
     pub id: String,
     pub name: String,
     pub subdomain: Option<String>,
-    pub aliases: Vec<String>,
+    pub aliases: Vec<Alias>,
     pub profile_picture_sm: Option<String>,
     pub profile_picture: Option<String>,
     pub profile_picture_lg: Option<String>,
@@ -30,6 +30,15 @@ pub struct ClientUser {
     pub moderation_status: Option<String>,
     pub about_info: Option<String>,
     pub last_online: DateTime<Utc>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Alias {
+    game_id: i32,
+    name: String,
+    social_link_source: Option<String>,
+    additional_info: Value,
+    edited_at: DateTime<Utc>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
