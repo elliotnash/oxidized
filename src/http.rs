@@ -21,9 +21,7 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use crate::{BASE_URL, WS_URL};
 
-pub mod models;
-use models::{ClientUser, ClientUserRoot, ChatMessageCreated, Credentials, EventType, Hello};
-
+use crate::models::{ClientUser, ClientUserRoot, ChatMessageCreated, Credentials, EventType, Hello};
 
 
 pub struct HttpClient {
@@ -130,7 +128,9 @@ impl HttpClient {
     async fn event_handler(&self, event_type: EventType, event: Value) {
         match event_type {
             EventType::ChatMessageCreated => {
+                debug!("{}", event.to_string());
                 let event = serde_json::from_value::<ChatMessageCreated>(event).unwrap();
+                debug!("{:?}", event);
             }
         }
     }
