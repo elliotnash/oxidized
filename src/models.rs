@@ -68,7 +68,7 @@ pub struct ChatMessageCreated {
     pub created_at: DateTime<Utc>,
     //TODO userID struct
     pub created_by: String,
-    pub guilded_client_id: String,
+    pub guilded_client_id: Option<String>,
     pub message: Message,
     pub team_id: String
 }
