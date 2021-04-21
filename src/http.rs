@@ -21,7 +21,7 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use crate::{BASE_URL, WS_URL};
 
-use crate::models::{ClientUser, ClientUserRoot, ChatMessageCreated, Credentials, EventType, Hello};
+use crate::models::{ClientUser, ClientUserRoot, message::ChatMessageCreated, Credentials, EventType, Hello};
 
 
 pub struct HttpClient {
