@@ -62,7 +62,8 @@ pub struct Block {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum BlockType {
-    Paragraph
+    Paragraph,
+    WebhookMessage
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase", tag = "type", content="data")]
