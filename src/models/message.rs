@@ -33,28 +33,46 @@ pub struct Message {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageContent {
-    object: String,
     document: Document
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
-    object: String,
-    data: Option<GenericData>,
-    nodes: Vec<GenericNode>
+    nodes: Vec<Node>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase", tag = "object")]
+pub enum Node {
+    Block(Block),
+    Text(Text),
+    Inline(Inline)
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GenericNode {
-    object: String,
-    data: Option<GenericData>,
-    leaves: Option<Vec<Leaf>>,
-    nodes: Option<Vec<GenericNode>>
+pub struct Text {
+    leaves: Vec<Leaf>
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GenericData {
-    reaction: Option<Reaction>
+pub struct Block {
+    //TODO figure out wtf is in a block data section
+    r#type: BlockType,
+    nodes: Vec<Node>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum BlockType {
+    Paragraph
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase", tag = "type", content="data")]
+pub enum Inline {
+    Reaction(ReactionData)
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ReactionData {
+    reaction: Reaction
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -65,7 +83,6 @@ pub struct Reaction {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Leaf {
-    object: String,
     text: String,
     marks: Vec<String>
 }
