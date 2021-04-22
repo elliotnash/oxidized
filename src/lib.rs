@@ -28,13 +28,13 @@ impl Client {
     }
     async fn reconnect(&mut self) {
         loop {
+            sleep(Duration::from_secs(10)).await;
             info!("Attempting to reconnect to guilded.gg");
             if let Ok((http, client_user)) = HttpClient::login(&self.credentials).await {
                 self.http = http;
                 self.client_user = client_user;
                 break;
             }
-            sleep(Duration::from_secs(10)).await;
         }
     }
 
