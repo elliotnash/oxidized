@@ -32,12 +32,12 @@ pub struct HttpClient {
 
 impl HttpClient {
 
-    pub(crate) async fn login(email: &str, password: &str) -> (Self, ClientUser) {
+    pub(crate) async fn login(cred: &Credentials) -> (Self, ClientUser) {
         let http_client = reqwest::ClientBuilder::new()
             .cookie_store(true).build().unwrap();
 
         let result = http_client.post(format!("{}/login", BASE_URL))
-            .json(&Credentials{email: email.to_string(), password: password.to_string()}).send().await;
+            .json(&cred).send().await;
         
         let response = match result {
             Ok(response) => {
@@ -93,33 +93,47 @@ impl HttpClient {
         info!("Connected to guilded.gg");
 
         let both = future::join(
-            self.heartbeat(hello.ping_interval), 
-            self.event_listener()
+            self.heartbeat(&hello),
+            self.event_listener(&hello)
         );
         both.await;
     }
 
-    async fn heartbeat(&self, ping_interval: i32) {
+    async fn heartbeat(&self, hello: &Hello) {
         loop{
-            self.ws_sink.write().await.send(Message::text("2")).await.unwrap();
-            sleep(Duration::from_millis(ping_interval as u64)).await;
+            if let Err(err) = self.ws_sink.write().await.send(Message::text("2")).await {
+                debug!("Couldn't ping websocket: {:?}", err);
+                info!("Disconnected from websocket!");
+                break;
+            }
+            sleep(Duration::from_millis(hello.ping_interval as u64)).await;
         }
     }
 
-    async fn event_listener(&self) {
+    async fn event_listener(&self, hello: &Hello) {
         loop{
-            if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
-                let rm = RawMessage::from_raw(&msg);
-                match rm.code {
-                    3 => debug!("Server heartbeat received"),
-                    42 => {
-                        if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
-                            self.event_handler(event_type, event).await;
-                        } else {
-                            info!("Received unkown event, message: {}", rm.json)
-                        }
-                    },
-                    _ => info!("Received unkown code: {}, message: {}", rm.code, rm.json)
+            match tokio::time::timeout(Duration::from_millis((hello.ping_timeout+hello.ping_interval) as u64), async {
+                if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
+                    let rm = RawMessage::from_raw(&msg);
+                    match rm.code {
+                        3 => {
+                            debug!("Server heartbeat received");
+                        },
+                        42 => {
+                            if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
+                                self.event_handler(event_type, event).await;
+                            } else {
+                                info!("Received unkown event, message: {}", rm.json)
+                            }
+                        },
+                        _ => info!("Received unkown code: {}, message: {}", rm.code, rm.json)
+                    }
+                }
+            }).await {
+                Ok(_) => {}
+                Err(_) => {
+                    info!("Websocket timed out!");
+                    break;
                 }
             }
         }

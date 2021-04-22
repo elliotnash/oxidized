@@ -5,6 +5,6 @@ async fn main() {
     let password = std::env::var("PASSWORD").unwrap();
     tracing_subscriber::fmt::init();
     
-    let client = oxidized::Client::login(&email, &password).await;
+    let mut client = oxidized::Client::login(&email, &password).await;
     client.run().await;
 }

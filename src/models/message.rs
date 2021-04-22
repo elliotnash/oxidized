@@ -44,9 +44,9 @@ pub struct Document {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GenericNode {
-    //TODO make object type enums
     object: String,
     data: Option<GenericData>,
+    leaves: Option<Vec<Leaf>>,
     nodes: Option<Vec<GenericNode>>
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,7 +57,13 @@ pub struct GenericData {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Reaction {
-    //TODO make object type enums
     id: i32,
     custom_reaction_id: i32
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Leaf {
+    object: String,
+    text: String,
+    marks: Vec<String>
 }
