@@ -1,4 +1,5 @@
 use serde_json::Value;
+use std::sync::Arc;
 use tokio::{
     sync::RwLock,
     net::TcpStream,
@@ -24,10 +25,14 @@ use crate::{BASE_URL, WS_URL};
 use crate::models::{ClientUser, ClientUserRoot, message::ChatMessageCreated, Credentials, EventType, Hello};
 
 
+type WsStream = Arc<RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>>>;
+type WsSink = Arc<RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>>>;
+
+
 pub struct HttpClient {
     http_client: reqwest::Client,
-    ws_stream: RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>>,
-    ws_sink: RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>>
+    ws_stream: WsStream,
+    ws_sink: WsSink
 }
 
 impl HttpClient {
@@ -80,7 +85,7 @@ impl HttpClient {
         ).await.unwrap();
 
         let (ws_sink, ws_stream) = ws_stream.split();
-        (HttpClient{http_client, ws_stream: RwLock::new(ws_stream), ws_sink: RwLock::new(ws_sink)}, client_user)
+        (HttpClient{http_client, ws_stream: Arc::new(RwLock::new(ws_stream)), ws_sink: Arc::new(RwLock::new(ws_sink))}, client_user)
 
     }
 
@@ -92,28 +97,30 @@ impl HttpClient {
         let hello = serde_json::from_str::<Hello>(hello_text).expect("Invalid acknowledgement packet");
         info!("Connected to guilded.gg");
 
-        let both = future::join(
-            self.heartbeat(&hello),
-            self.event_listener(&hello)
-        );
-        both.await;
+        let event_listener_task = tokio::spawn(Self::event_listener(self.ws_stream.clone(), hello.clone()));
+        let heartbeat_task = tokio::spawn(Self::heartbeat(self.ws_sink.clone(), hello.clone()));
+        if let Err(err) = event_listener_task.await {
+            debug!("Error in task heartbeat_task: {}", err);
+        }
+        heartbeat_task.abort();
+        info!("Disconnected from guilded.gg!");
     }
 
-    async fn heartbeat(&self, hello: &Hello) {
+    async fn heartbeat(ws_sink: WsSink, hello: Hello) {
+        debug!("{:?}", &hello);
         loop{
-            if let Err(err) = self.ws_sink.write().await.send(Message::text("2")).await {
+            if let Err(err) = ws_sink.write().await.send(Message::text("2")).await {
                 debug!("Couldn't ping websocket: {:?}", err);
-                info!("Disconnected from websocket!");
                 break;
             }
             sleep(Duration::from_millis(hello.ping_interval as u64)).await;
         }
     }
 
-    async fn event_listener(&self, hello: &Hello) {
+    async fn event_listener(ws_stream: WsStream, hello: Hello) {
         loop{
             match tokio::time::timeout(Duration::from_millis((hello.ping_timeout+hello.ping_interval) as u64), async {
-                if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
+                if let Some(Ok(Message::Text(msg))) = ws_stream.write().await.next().await {
                     let rm = RawMessage::from_raw(&msg);
                     match rm.code {
                         3 => {
@@ -121,7 +128,7 @@ impl HttpClient {
                         },
                         42 => {
                             if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
-                                self.event_handler(event_type, event).await;
+                                Self::event_handler(event_type, event).await;
                             } else {
                                 info!("Received unkown event, message: {}", rm.json)
                             }
@@ -132,14 +139,14 @@ impl HttpClient {
             }).await {
                 Ok(_) => {}
                 Err(_) => {
-                    info!("Websocket timed out!");
+                    debug!("Websocket didn't recieve heartbeat within timeout!");
                     break;
                 }
             }
         }
     }
 
-    async fn event_handler(&self, event_type: EventType, event: Value) {
+    async fn event_handler(event_type: EventType, event: Value) {
         match event_type {
             EventType::ChatMessageCreated => {
                 debug!("{}", event.to_string());

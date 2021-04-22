@@ -43,7 +43,7 @@ pub struct Alias {
     edited_at: DateTime<Utc>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Hello {
     pub sid: String,
