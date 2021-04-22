@@ -24,6 +24,7 @@ pub struct ChatMessageCreated {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
+    bot_id: Option<String>,
     content: MessageContent,
     created_at: DateTime<Utc>,
     created_by: String,
@@ -55,29 +56,70 @@ pub struct Text {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Block {
-    //TODO figure out wtf is in a block data section
+    data: BlockData,
     r#type: BlockType,
     nodes: Vec<Node>
 }
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
+pub struct BlockData {
+    embeds: Vec<Embed>
+}
+impl Default for BlockData {
+    fn default() -> Self {
+        Self{embeds: Vec::new()}
+    }
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub enum BlockType {
     Paragraph,
-    WebhookMessage
+    #[serde(rename = "webhookMessage")]
+    WebhookMessage,
+    ListItem,
+    UnorderedList,
+    Image,
+    CodeLine,
+    CodeContainer
 }
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase", tag = "type", content="data")]
+#[serde(rename_all = "camelCase", tag = "type")]
 pub enum Inline {
-    Reaction(ReactionData)
+    #[serde()]
+    Reaction(ReactionData),
+    Channel(Channel)
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct ReactionData {
-    reaction: Reaction
+pub struct Channel {
+    data: ChannelData,
+    nodes: Vec<Node>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelData {
+    channel: ChannelObject
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelObject {
+    id: String,
+    matcher: String,
+    name: String
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Reaction {
+    data: ReactionData
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ReactionData {
+    reaction: ReactionObject
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ReactionObject {
     id: i32,
     custom_reaction_id: i32
 }
@@ -85,5 +127,33 @@ pub struct Reaction {
 #[serde(rename_all = "camelCase")]
 pub struct Leaf {
     text: String,
-    marks: Vec<String>
+    marks: Vec<Mark>
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum MarkType {
+    InlineCodeV2,
+    Bold
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Mark {
+    r#type: MarkType
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Embed {
+    author: EmbedAuthor,
+    color: i32,
+    description: String,
+    title: String,
+    url: String
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbedAuthor {
+    icon_url: String,
+    name: String,
+    url: String
 }
