@@ -1,9 +1,12 @@
+use tokio::time::{Duration, sleep};
+use error::LoginError;
 use tracing::{info, debug};
 
 mod http;
 use http::HttpClient;
 pub mod models;
 use models::{ClientUser, Credentials};
+pub mod error;
 
 const BASE_URL: &str = "https://www.guilded.gg/api";
 const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
@@ -16,22 +19,30 @@ pub struct Client {
 
 impl Client {
 
-    pub async fn login(email: &str, password: &str) -> Self {
+    pub async fn login(email: &str, password: &str) -> Result<Self, LoginError> {
         let cred = Credentials{email: email.to_string(), password: password.to_string()};
-        let (http, client_user) = HttpClient::login(&cred).await;
+        let (http, client_user) = HttpClient::login(&cred).await?;
         let client = Client{http, client_user, credentials: cred};
         info!("Logged in to guilded.gg!");
-        client
+        Ok(client)
     }
     async fn reconnect(&mut self) {
-        let (http, client_user) = HttpClient::login(&self.credentials).await;
-        self.http = http;
-        self.client_user = client_user;
-        info!("Reconnected to guilded.gg!");
+        loop {
+            info!("Attempting to reconnect to guilded.gg");
+            if let Ok((http, client_user)) = HttpClient::login(&self.credentials).await {
+                self.http = http;
+                self.client_user = client_user;
+                break;
+            }
+            sleep(Duration::from_secs(10)).await;
+        }
     }
 
     pub async fn run(&mut self) {
-        self.http.run().await;
+        loop {
+            self.http.run().await;
+            self.reconnect().await;
+        }
     }
 
 }

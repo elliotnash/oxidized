@@ -7,7 +7,7 @@ use tokio::{
 };
 use tokio_native_tls::TlsStream;
 use tracing::{info, debug};
-use reqwest::StatusCode;
+use reqwest::{Client, Response, StatusCode};
 use async_tungstenite::{
     WebSocketStream, 
     stream::Stream, 
@@ -23,6 +23,7 @@ use lazy_static::lazy_static;
 use crate::{BASE_URL, WS_URL};
 
 use crate::models::{ClientUser, ClientUserRoot, message::ChatMessageCreated, Credentials, EventType, Hello};
+use crate::error::{LoginError, LoginErrorType};
 
 
 type WsStream = Arc<RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>>>;
@@ -37,39 +38,43 @@ pub struct HttpClient {
 
 impl HttpClient {
 
-    pub(crate) async fn login(cred: &Credentials) -> (Self, ClientUser) {
-        let http_client = reqwest::ClientBuilder::new()
-            .cookie_store(true).build().unwrap();
-
+    async fn request_login(http_client: &Client, cred: &Credentials) -> Result<Response, LoginError> {
         let result = http_client.post(format!("{}/login", BASE_URL))
-            .json(&cred).send().await;
-        
-        let response = match result {
+            .json(cred).send().await;
+        match result {
             Ok(response) => {
                 match response.status() {
                     StatusCode::OK => {
                         debug!("Received response from /api/login");
+                        Ok(response)
                     }
                     StatusCode::BAD_REQUEST => {
-                        panic!("Invalid login credentials");
+                        Err(LoginError{error_type: LoginErrorType::InvalidCredentials})
                     }
                     code => {
-                        panic!("Connection to guilded returned: {}", code);
+                        debug!("Connection to guilded returned: {}", code);
+                        Err(LoginError{error_type: LoginErrorType::ServerError})
                     }
-                };
-                response
+                }
             }
             Err(error) => {
                 debug!("Connection error:\n{}", error);
                 if let Some(status) = error.status() {
-                    panic!("Connection to guilded returned: {}", status);
+                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
                 } else if error.is_timeout() {
-                    panic!("Connection to guilded timed out");
+                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
                 } else {
-                    panic!("Error connecting to guilded");
+                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
                 }
             }
-        };
+        }
+    }
+
+    pub(crate) async fn login(cred: &Credentials) -> Result<(Self, ClientUser), LoginError> {
+        let http_client = reqwest::ClientBuilder::new()
+            .cookie_store(true).build().unwrap();
+
+        let response = Self::request_login(&http_client, cred).await?;
 
         let cookies = response.headers().get("Set-Cookie").expect("Invalid response from server").clone();
         let client_user = response.json::<ClientUserRoot>().await.expect("Invalid response from server").user;
@@ -85,7 +90,7 @@ impl HttpClient {
         ).await.unwrap();
 
         let (ws_sink, ws_stream) = ws_stream.split();
-        (HttpClient{http_client, ws_stream: Arc::new(RwLock::new(ws_stream)), ws_sink: Arc::new(RwLock::new(ws_sink))}, client_user)
+        Ok((HttpClient{http_client, ws_stream: Arc::new(RwLock::new(ws_stream)), ws_sink: Arc::new(RwLock::new(ws_sink))}, client_user))
 
     }
 
