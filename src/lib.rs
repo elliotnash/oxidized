@@ -1,6 +1,6 @@
 use tokio::time::{Duration, sleep};
 use error::LoginError;
-use tracing::{info, debug};
+use tracing::info;
 
 mod http;
 use http::HttpClient;
