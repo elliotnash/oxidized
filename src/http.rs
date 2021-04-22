@@ -1,6 +1,7 @@
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::{
+    select,
     sync::RwLock,
     net::TcpStream,
     time::{sleep, Duration}
@@ -59,7 +60,7 @@ impl HttpClient {
             }
             Err(error) => {
                 debug!("Connection error:\n{}", error);
-                if let Some(status) = error.status() {
+                if let Some(_) = error.status() {
                     Err(LoginError{error_type: LoginErrorType::ConnectionError})
                 } else if error.is_timeout() {
                     Err(LoginError{error_type: LoginErrorType::ConnectionError})
@@ -102,19 +103,18 @@ impl HttpClient {
         let hello = serde_json::from_str::<Hello>(hello_text).expect("Invalid acknowledgement packet");
         info!("Connected to guilded.gg");
 
-        let event_listener_task = tokio::spawn(Self::event_listener(self.ws_stream.clone(), hello.clone()));
-        let heartbeat_task = tokio::spawn(Self::heartbeat(self.ws_sink.clone(), hello.clone()));
-        if let Err(err) = event_listener_task.await {
-            debug!("Error in task heartbeat_task: {}", err);
+        select!{
+            _ = self.event_listener(&hello) => {}
+            _ = self.heartbeat(&hello) => {}
         }
-        heartbeat_task.abort();
         info!("Disconnected from guilded.gg!");
+
     }
 
-    async fn heartbeat(ws_sink: WsSink, hello: Hello) {
+    async fn heartbeat(&self, hello: &Hello) {
         debug!("{:?}", &hello);
         loop{
-            if let Err(err) = ws_sink.write().await.send(Message::text("2")).await {
+            if let Err(err) = self.ws_sink.write().await.send(Message::text("2")).await {
                 debug!("Couldn't ping websocket: {:?}", err);
                 break;
             }
@@ -122,10 +122,10 @@ impl HttpClient {
         }
     }
 
-    async fn event_listener(ws_stream: WsStream, hello: Hello) {
+    async fn event_listener(&self, hello: &Hello) {
         loop{
             match tokio::time::timeout(Duration::from_millis((hello.ping_timeout+hello.ping_interval) as u64), async {
-                if let Some(Ok(Message::Text(msg))) = ws_stream.write().await.next().await {
+                if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
                     let rm = RawMessage::from_raw(&msg);
                     match rm.code {
                         3 => {
