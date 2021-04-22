@@ -133,7 +133,8 @@ pub struct Leaf {
 #[serde(rename_all = "kebab-case")]
 pub enum MarkType {
     InlineCodeV2,
-    Bold
+    Bold,
+    Italic
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
