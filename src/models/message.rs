@@ -1,16 +1,18 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::channel::{ChannelType, ContentType};
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessageCreated {
     pub channel_category_id: Option<i32>,
+    //TODO channel_id struct
     pub channel_id: String,
-    //TODO channel_type enum
-    pub channel_type: String,
+    pub channel_type: ChannelType,
+    //TODO content_id struct
     pub content_id: String,
-    //TODO content_type enum
-    pub content_type: String,
+    pub content_type: ContentType,
     pub created_at: DateTime<Utc>,
     //TODO userID struct
     pub created_by: String,

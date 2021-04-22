@@ -1,0 +1,16 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ChannelType {
+    Team,
+    DM
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum ContentType {
+    Chat,
+    Voice,
+    Forum,
+    Doc
+}
