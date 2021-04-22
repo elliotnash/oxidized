@@ -24,12 +24,13 @@ pub struct ChatMessageCreated {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
-    bot_id: Option<String>,
-    content: MessageContent,
-    created_at: DateTime<Utc>,
-    created_by: String,
-    id: String,
-    r#type: String
+    pub bot_id: Option<String>,
+    pub content: MessageContent,
+    pub created_at: DateTime<Utc>,
+    pub created_by: String,
+    pub id: String,
+    #[serde(rename = "type")]
+    pub message_type: String
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -57,7 +58,8 @@ pub struct Text {
 #[serde(rename_all = "camelCase")]
 pub struct Block {
     data: BlockData,
-    r#type: BlockType,
+    #[serde(rename = "type")]
+    block_type: BlockType,
     nodes: Vec<Node>
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -139,7 +141,8 @@ pub enum MarkType {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Mark {
-    r#type: MarkType
+    #[serde(rename = "type")]
+    mark_type: MarkType
 }
 
 #[derive(Serialize, Deserialize, Debug)]
