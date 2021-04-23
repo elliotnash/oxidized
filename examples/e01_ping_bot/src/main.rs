@@ -7,7 +7,7 @@ use oxidized::{
 struct Events;
 #[async_trait]
 impl EventHandler for Events {
-    async fn on_message() {
+    async fn on_message(&self) {
         tracing::info!("RECIEVED MESSAGE EVENT");
     }
 }
@@ -20,6 +20,7 @@ async fn main() {
     
     ClientBuilder::new()
         .credentials(&email, &password)
+        .event_handler(Events)
         .login().await
         .unwrap()
         .run().await;

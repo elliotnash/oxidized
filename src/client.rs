@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use tokio::time::{Duration, sleep};
-use crate::error::{LoginError, LoginErrorType};
+use crate::{error::{LoginError, LoginErrorType}, event::EventHandler};
 use tracing::info;
 
 use crate::http::HttpClient;
@@ -36,19 +38,25 @@ impl Client {
 }
 
 pub struct ClientBuilder {
-    credentials: Option<Credentials>
+    credentials: Option<Credentials>,
+    event_handler: Option<Arc<dyn EventHandler>>
 }
 
 impl ClientBuilder{
     pub fn new() -> Self {
         Self {
-            credentials: None
+            credentials: None,
+            event_handler: None
         }
     }
     pub fn credentials(&mut self, email: &str, password: &str) -> &mut Self {
         self.credentials = Some(Credentials{
             email: email.to_string(), password: password.to_string()
         });
+        self
+    }
+    pub fn event_handler<H: EventHandler + 'static>(&mut self, event_handler: H) -> &mut Self {
+        self.event_handler = Some(Arc::new(event_handler));
         self
     }
     pub async fn login(&self) -> Result<Client, LoginError> {
