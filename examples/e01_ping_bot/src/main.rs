@@ -1,4 +1,4 @@
-use oxidized::ClientBuilder;
+use oxidized::client::ClientBuilder;
 
 #[tokio::main]
 async fn main() {
