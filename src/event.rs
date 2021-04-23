@@ -11,7 +11,7 @@ use crate::async_trait;
 
 #[async_trait]
 pub trait EventHandler: Send + Sync {
-    async fn on_message(&self, event: ChatMessageCreated) {}
+    async fn on_message(&self, _event: ChatMessageCreated) {}
 }
 pub(crate) struct DefaultHandler;
 impl EventHandler for DefaultHandler{}
