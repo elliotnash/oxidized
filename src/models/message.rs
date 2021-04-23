@@ -84,7 +84,8 @@ pub enum BlockType {
     UnorderedList,
     Image,
     CodeLine,
-    CodeContainer
+    CodeContainer,
+    Form
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
