@@ -21,9 +21,9 @@ use async_tungstenite::{
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
-use crate::{BASE_URL, WS_URL, event::EventDispatcher};
+use crate::{BASE_URL, WS_URL, event::{DefaultHandler, EventDispatcher}};
 
-use crate::models::{ClientUser, ClientUserRoot, message::ChatMessageCreated, Credentials, EventType, Hello};
+use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
 use crate::error::{LoginError, LoginErrorType};
 
 
@@ -36,7 +36,7 @@ pub struct HttpClient {
     http_client: reqwest::Client,
     ws_stream: WsStream,
     ws_sink: WsSink,
-    pub(crate) dispatcher: Option<EventDispatcher>
+    pub(crate) dispatcher: EventDispatcher
 }
 
 impl HttpClient {
@@ -97,7 +97,7 @@ impl HttpClient {
             http_client,
             ws_stream: Arc::new(RwLock::new(ws_stream)),
             ws_sink: Arc::new(RwLock::new(ws_sink)),
-            dispatcher: None
+            dispatcher: EventDispatcher{handler: Arc::new(DefaultHandler)}
         }, client_user))
 
     }
@@ -140,7 +140,7 @@ impl HttpClient {
                         },
                         42 => {
                             if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
-                                Self::event_handler(event_type, event).await;
+                                self.dispatcher.event_handler(event_type, event).await;
                             } else {
                                 info!("Received unkown event, message: {}", rm.json)
                             }
@@ -154,16 +154,6 @@ impl HttpClient {
                     debug!("Websocket didn't recieve heartbeat within timeout!");
                     break;
                 }
-            }
-        }
-    }
-
-    async fn event_handler(event_type: EventType, event: Value) {
-        match event_type {
-            EventType::ChatMessageCreated => {
-                debug!("{}", event.to_string());
-                let event = serde_json::from_value::<ChatMessageCreated>(event).unwrap();
-                debug!("{:?}", event);
             }
         }
     }

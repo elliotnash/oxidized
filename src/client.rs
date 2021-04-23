@@ -69,7 +69,7 @@ impl ClientBuilder{
         let cred = self.credentials.clone().ok_or(LoginError{error_type: LoginErrorType::ConnectionError})?;
         let (mut http, client_user) = HttpClient::login(&cred).await?;
         if let Some(handler) = self.event_handler.clone() {
-            http.dispatcher = Some(EventDispatcher{handler});
+            http.dispatcher = EventDispatcher{handler};
         }
         let client = Client{http, client_user, credentials: cred};
         info!("Logged in to guilded.gg!");
