@@ -1,4 +1,16 @@
-use oxidized::client::ClientBuilder;
+use oxidized::{
+    client::ClientBuilder,
+    event::EventHandler,
+    async_trait
+};
+
+struct Events;
+#[async_trait]
+impl EventHandler for Events {
+    async fn on_message() {
+        tracing::info!("RECIEVED MESSAGE EVENT");
+    }
+}
 
 #[tokio::main]
 async fn main() {
