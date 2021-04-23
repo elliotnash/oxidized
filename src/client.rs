@@ -1,7 +1,16 @@
 use std::sync::Arc;
 
 use tokio::time::{Duration, sleep};
-use crate::{error::{LoginError, LoginErrorType}, event::EventHandler};
+use crate::{
+    error::{
+        LoginError,
+        LoginErrorType
+    },
+    event::{
+        EventHandler,
+        EventDispatcher
+    }
+};
 use tracing::info;
 
 use crate::http::HttpClient;
@@ -15,7 +24,6 @@ pub struct Client {
 }
 
 impl Client {
-
     async fn reconnect(&mut self) {
         loop {
             sleep(Duration::from_secs(10)).await;
@@ -27,14 +35,12 @@ impl Client {
             }
         }
     }
-
     pub async fn run(&mut self) {
         loop {
             self.http.run().await;
             self.reconnect().await;
         }
     }
-
 }
 
 pub struct ClientBuilder {
@@ -61,7 +67,10 @@ impl ClientBuilder{
     }
     pub async fn login(&self) -> Result<Client, LoginError> {
         let cred = self.credentials.clone().ok_or(LoginError{error_type: LoginErrorType::ConnectionError})?;
-        let (http, client_user) = HttpClient::login(&cred).await?;
+        let (mut http, client_user) = HttpClient::login(&cred).await?;
+        if let Some(handler) = self.event_handler.clone() {
+            http.dispatcher = Some(EventDispatcher{handler});
+        }
         let client = Client{http, client_user, credentials: cred};
         info!("Logged in to guilded.gg!");
         Ok(client)

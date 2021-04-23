@@ -21,7 +21,7 @@ use async_tungstenite::{
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
-use crate::{BASE_URL, WS_URL};
+use crate::{BASE_URL, WS_URL, event::EventDispatcher};
 
 use crate::models::{ClientUser, ClientUserRoot, message::ChatMessageCreated, Credentials, EventType, Hello};
 use crate::error::{LoginError, LoginErrorType};
@@ -35,7 +35,8 @@ type WsSink = Arc<RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream
 pub struct HttpClient {
     http_client: reqwest::Client,
     ws_stream: WsStream,
-    ws_sink: WsSink
+    ws_sink: WsSink,
+    pub(crate) dispatcher: Option<EventDispatcher>
 }
 
 impl HttpClient {
@@ -92,7 +93,12 @@ impl HttpClient {
         ).await.unwrap();
 
         let (ws_sink, ws_stream) = ws_stream.split();
-        Ok((HttpClient{http_client, ws_stream: Arc::new(RwLock::new(ws_stream)), ws_sink: Arc::new(RwLock::new(ws_sink))}, client_user))
+        Ok((HttpClient{
+            http_client,
+            ws_stream: Arc::new(RwLock::new(ws_stream)),
+            ws_sink: Arc::new(RwLock::new(ws_sink)),
+            dispatcher: None
+        }, client_user))
 
     }
 
