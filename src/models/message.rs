@@ -78,6 +78,8 @@ pub enum BlockType {
     Paragraph,
     #[serde(rename = "webhookMessage")]
     WebhookMessage,
+    #[serde(rename = "systemMessage")]
+    SystemMessage,
     ListItem,
     UnorderedList,
     Image,
