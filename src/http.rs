@@ -31,6 +31,7 @@ type WsStream = Arc<RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpSt
 type WsSink = Arc<RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>>>;
 
 
+#[derive(Debug)]
 pub struct HttpClient {
     http_client: reqwest::Client,
     ws_stream: WsStream,

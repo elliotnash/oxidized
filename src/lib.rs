@@ -1,5 +1,5 @@
 use tokio::time::{Duration, sleep};
-use error::LoginError;
+use error::{LoginError, LoginErrorType};
 use tracing::info;
 
 mod http;
@@ -11,6 +11,7 @@ pub mod error;
 const BASE_URL: &str = "https://www.guilded.gg/api";
 const WS_URL: &str = "wss://api.guilded.gg/socket.io/?jwt=undefined&EIO=3&transport=websocket";
 
+#[derive(Debug)]
 pub struct Client {
     pub http: HttpClient,
     pub client_user: ClientUser,
@@ -19,13 +20,6 @@ pub struct Client {
 
 impl Client {
 
-    pub async fn login(email: &str, password: &str) -> Result<Self, LoginError> {
-        let cred = Credentials{email: email.to_string(), password: password.to_string()};
-        let (http, client_user) = HttpClient::login(&cred).await?;
-        let client = Client{http, client_user, credentials: cred};
-        info!("Logged in to guilded.gg!");
-        Ok(client)
-    }
     async fn reconnect(&mut self) {
         loop {
             sleep(Duration::from_secs(10)).await;
@@ -45,4 +39,29 @@ impl Client {
         }
     }
 
+}
+
+pub struct ClientBuilder {
+    credentials: Option<Credentials>
+}
+
+impl ClientBuilder{
+    pub fn new() -> Self {
+        Self {
+            credentials: None
+        }
+    }
+    pub fn credentials(&mut self, email: &str, password: &str) -> &mut Self {
+        self.credentials = Some(Credentials{
+            email: email.to_string(), password: password.to_string()
+        });
+        self
+    }
+    pub async fn login(&self) -> Result<Client, LoginError> {
+        let cred = self.credentials.clone().ok_or(LoginError{error_type: LoginErrorType::ConnectionError})?;
+        let (http, client_user) = HttpClient::login(&cred).await?;
+        let client = Client{http, client_user, credentials: cred};
+        info!("Logged in to guilded.gg!");
+        Ok(client)
+    }
 }

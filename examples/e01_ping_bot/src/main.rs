@@ -1,3 +1,4 @@
+use oxidized::ClientBuilder;
 
 #[tokio::main]
 async fn main() {
@@ -5,6 +6,10 @@ async fn main() {
     let password = std::env::var("PASSWORD").unwrap();
     tracing_subscriber::fmt::init();
     
-    let mut client = oxidized::Client::login(&email, &password).await.unwrap();
-    client.run().await;
+    ClientBuilder::new()
+        .credentials(&email, &password)
+        .login().await
+        .unwrap()
+        .run().await;
+    
 }

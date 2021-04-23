@@ -5,7 +5,7 @@ use serde_json::Value;
 pub mod message;
 pub mod channel;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Credentials {
     pub email: String,
     pub password: String
