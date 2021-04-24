@@ -23,7 +23,7 @@ async fn main() {
         .credentials(&email, &password)
         .event_handler(Events)
         .login().await
-        .unwrap()
+        .expect("Failed to create client")
         .run().await;
     
 }
