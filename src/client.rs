@@ -8,7 +8,8 @@ use crate::{
     },
     event::{
         EventHandler,
-        EventDispatcher
+        EventDispatcher,
+        DefaultHandler
     }
 };
 use tracing::info;
@@ -18,9 +19,10 @@ use crate::models::{ClientUser, Credentials};
 
 #[derive(Debug)]
 pub struct Client {
-    pub http: HttpClient,
+    pub http: Arc<HttpClient>,
     pub client_user: ClientUser,
-    pub credentials: Credentials
+    pub credentials: Credentials,
+    pub(crate) dispatcher: EventDispatcher
 }
 
 impl Client {
@@ -28,7 +30,8 @@ impl Client {
         loop {
             sleep(Duration::from_secs(10)).await;
             info!("Attempting to reconnect to guilded.gg");
-            if let Ok((http, client_user)) = HttpClient::login(&self.credentials).await {
+            if let Ok((http, client_user)) = 
+                HttpClient::login(&self.credentials, self.dispatcher.clone()).await {
                 self.http = http;
                 self.client_user = client_user;
                 break;
@@ -37,7 +40,7 @@ impl Client {
     }
     pub async fn run(&mut self) {
         loop {
-            self.http.run().await;
+            self.http.clone().run().await;
             self.reconnect().await;
         }
     }
@@ -67,11 +70,13 @@ impl ClientBuilder{
     }
     pub async fn login(&self) -> Result<Client, LoginError> {
         let cred = self.credentials.clone().ok_or(LoginError{error_type: LoginErrorType::ConnectionError})?;
-        let (mut http, client_user) = HttpClient::login(&cred).await?;
-        if let Some(handler) = self.event_handler.clone() {
-            http.dispatcher = EventDispatcher{handler};
-        }
-        let client = Client{http, client_user, credentials: cred};
+        let dispatcher = if let Some(handler) = self.event_handler.clone() {
+            EventDispatcher{handler}
+        } else {
+            EventDispatcher{handler: Arc::new(DefaultHandler)}
+        };
+        let (http, client_user) = HttpClient::login(&cred, dispatcher.clone()).await?;
+        let client = Client{http, client_user, credentials: cred, dispatcher};
         info!("Logged in to guilded.gg!");
         Ok(client)
     }

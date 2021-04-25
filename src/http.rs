@@ -21,7 +21,7 @@ use async_tungstenite::{
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
-use crate::{BASE_URL, WS_URL, event::{DefaultHandler, EventDispatcher}};
+use crate::{BASE_URL, WS_URL, event::EventDispatcher};
 
 use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
 use crate::error::{LoginError, LoginErrorType};
@@ -73,7 +73,7 @@ impl HttpClient {
         }
     }
 
-    pub(crate) async fn login(cred: &Credentials) -> Result<(Self, ClientUser), LoginError> {
+    pub(crate) async fn login(cred: &Credentials, dispatcher: EventDispatcher) -> Result<(Arc<Self>, ClientUser), LoginError> {
         let http_client = reqwest::ClientBuilder::new()
             .cookie_store(true).build().unwrap();
 
@@ -93,16 +93,20 @@ impl HttpClient {
         ).await.unwrap();
 
         let (ws_sink, ws_stream) = ws_stream.split();
-        Ok((HttpClient{
-            http_client,
-            ws_stream: Arc::new(RwLock::new(ws_stream)),
-            ws_sink: Arc::new(RwLock::new(ws_sink)),
-            dispatcher: EventDispatcher{handler: Arc::new(DefaultHandler)}
-        }, client_user))
+        Ok(
+            (Arc::new(
+                HttpClient{
+                    http_client,
+                    ws_stream: Arc::new(RwLock::new(ws_stream)),
+                    ws_sink: Arc::new(RwLock::new(ws_sink)),
+                    dispatcher
+            }),
+            client_user)
+        )
 
     }
 
-    pub(crate) async fn run(&self) {
+    pub(crate) async fn run(self: Arc<Self>) {
         let hello_text = &self.ws_stream.write().await.next().await
             .expect("Invalid acknowledgement packet")
             .expect("Invalid acknowledgement packet").into_text()
@@ -111,14 +115,14 @@ impl HttpClient {
         info!("Connected to guilded.gg");
 
         select!{
-            _ = self.event_listener(&hello) => {}
-            _ = self.heartbeat(&hello) => {}
+            _ = self.clone().event_listener(&hello) => {}
+            _ = self.clone().heartbeat(&hello) => {}
         }
         info!("Disconnected from guilded.gg!");
 
     }
 
-    async fn heartbeat(&self, hello: &Hello) {
+    async fn heartbeat(self: Arc<Self>, hello: &Hello) {
         debug!("{:?}", &hello);
         loop{
             if let Err(err) = self.ws_sink.write().await.send(Message::text("2")).await {
@@ -129,7 +133,7 @@ impl HttpClient {
         }
     }
 
-    async fn event_listener(&self, hello: &Hello) {
+    async fn event_listener(self: Arc<Self>, hello: &Hello) {
         loop{
             match tokio::time::timeout(Duration::from_millis((hello.ping_timeout+hello.ping_interval) as u64), async {
                 if let Some(Ok(Message::Text(msg))) = self.ws_stream.write().await.next().await {
