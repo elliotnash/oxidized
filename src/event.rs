@@ -1,17 +1,17 @@
 use std::{fmt::Debug, sync::Arc};
 use serde_json::error::Error;
 use serde_json::Value;
-use crate::models::{
+use crate::{http::HttpClient, models::{
     EventType,
     message::ChatMessageCreated
-};
+}};
 
 
 use crate::async_trait;
 
 #[async_trait]
 pub trait EventHandler: Send + Sync {
-    async fn on_message(&self, _event: ChatMessageCreated) {}
+    async fn on_message(&self, _http: Arc<HttpClient>, _event: ChatMessageCreated) {}
 }
 pub(crate) struct DefaultHandler;
 impl EventHandler for DefaultHandler{}
@@ -26,17 +26,17 @@ impl Debug for EventDispatcher {
     }
 }
 impl EventDispatcher {
-    pub(crate) async fn event_handler(&self, event_type: EventType, event: Value) {
+    pub(crate) async fn event_handler(&self, http: Arc<HttpClient>, event_type: EventType, event: Value) {
         let dispatcher = self.clone();
         tokio::spawn(async move {
-            dispatcher.dispatcher(event_type, event).await
+            dispatcher.dispatcher(http, event_type, event).await
         });
     }
-    async fn dispatcher(&self, event_type: EventType, event: Value) -> Result<(), Error> {
+    async fn dispatcher(&self, http: Arc<HttpClient>, event_type: EventType, event: Value) -> Result<(), Error> {
         match event_type {
             EventType::ChatMessageCreated => {
                 let event = serde_json::from_value::<ChatMessageCreated>(event)?;
-                self.handler.on_message(event).await;
+                self.handler.on_message(http, event).await;
                 Ok(())
             }
         }

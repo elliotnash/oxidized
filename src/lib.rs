@@ -74,7 +74,7 @@
 //! 
 //! ### Examples
 //! To see full examples, checkout our [github](https://github.com/elliotnash/oxidized/tree/main/examples)
-mod http;
+pub mod http;
 pub mod models;
 pub mod error;
 pub mod client;

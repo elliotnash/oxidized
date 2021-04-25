@@ -144,7 +144,7 @@ impl HttpClient {
                         },
                         42 => {
                             if let Ok((event_type, event)) = serde_json::from_str::<(EventType, Value)>(&rm.json) {
-                                self.dispatcher.event_handler(event_type, event).await;
+                                self.dispatcher.event_handler(self.clone(), event_type, event).await;
                             } else {
                                 info!("Received unkown event, message: {}", rm.json)
                             }
