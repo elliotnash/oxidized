@@ -2,8 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod message;
 pub mod channel;
+pub mod context;
+pub mod message;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Credentials {

@@ -33,7 +33,7 @@ type WsSink = Arc<RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream
 
 #[derive(Debug)]
 pub struct HttpClient {
-    http_client: reqwest::Client,
+    pub http_client: reqwest::Client,
     ws_stream: WsStream,
     ws_sink: WsSink,
     pub(crate) dispatcher: EventDispatcher

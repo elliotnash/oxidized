@@ -1,16 +1,17 @@
 use oxidized::{
     client::ClientBuilder,
     event::EventHandler,
-    http::HttpClient,
-    models::message::ChatMessageCreated,
+    models::{
+        message::ChatMessageCreated,
+        context::Context
+    },
     async_trait
 };
-use std::sync::Arc;
 
 struct Events;
 #[async_trait]
 impl EventHandler for Events {
-    async fn on_message(&self, http: Arc<HttpClient>, event: ChatMessageCreated) {
+    async fn on_message(&self, ctx: Context, event: ChatMessageCreated) {
         tracing::info!("RECIEVED MESSAGE EVENT");
     }
 }
