@@ -11,6 +11,7 @@
 //! checkout our [github](https://github.com/elliotnash/oxidized).
 //! 
 //! # Getting Started
+//! 
 //! ### Installation
 //! Start by adding the following to your dependancies section
 //! of your `Cargo.toml`:
@@ -27,6 +28,7 @@
 //! version = "1"
 //! features = ["macros", "rt-multi-thread"]
 //! ```
+//! 
 //! ### Basic Usage
 //! Create a new [`ClientBuilder`](`client::ClientBuilder`) to configure your client.
 //! Loging in is preformed with user credentials (email password), as Guilded's bot api
@@ -42,6 +44,7 @@
 //!         .run().await;
 //! }
 //! ```
+//! 
 //! ### Event Handling
 //! If you are familliar with Serenity, you'll notice that events in Oxidized are
 //! handled in a very similar way. To recieve events, you'll need to pass a struct
@@ -66,7 +69,11 @@
 //!         .run().await;
 //! }
 //! ```
-//! To see the full list of events, look at [`event::EventHandler`]
+//! To see the full list of events, look at [`event::EventHandler`].
+//! Remember all methods need to be async.
+//! 
+//! ### Examples
+//! To see full examples, checkout our [github](https://github.com/elliotnash/oxidized/tree/main/examples)
 mod http;
 pub mod models;
 pub mod error;
