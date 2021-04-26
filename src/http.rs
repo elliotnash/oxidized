@@ -3,21 +3,14 @@ use std::sync::Arc;
 use tokio::{
     select,
     sync::RwLock,
-    net::TcpStream,
     time::{sleep, Duration}
 };
-use tokio_native_tls::TlsStream;
 use tracing::{info, debug};
 use reqwest::{Client, Response, StatusCode};
-use async_tungstenite::{
-    WebSocketStream, 
-    stream::Stream, 
-    tokio::TokioAdapter, 
-    tungstenite::{
+use async_tungstenite::{WebSocketStream, tokio::ConnectStream, tungstenite::{
         Message, 
         handshake::client::Request
-    }
-};
+    }};
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
@@ -27,15 +20,15 @@ use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
 use crate::error::{LoginError, LoginErrorType};
 
 
-type WsStream = Arc<RwLock<SplitStream<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>>>>;
-type WsSink = Arc<RwLock<SplitSink<WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>, Message>>>;
+type WsStream = SplitStream<WebSocketStream<ConnectStream>>;
+type WsSink = SplitSink<WebSocketStream<ConnectStream>, Message>;
 
 
 #[derive(Debug)]
 pub struct HttpClient {
     pub http_client: reqwest::Client,
-    ws_stream: WsStream,
-    ws_sink: WsSink,
+    ws_stream: Arc<RwLock<WsStream>>,
+    ws_sink: Arc<RwLock<WsSink>>,
     pub(crate) dispatcher: EventDispatcher
 }
 
