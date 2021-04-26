@@ -1,4 +1,6 @@
-use serde_json::Value;
+use serde::Serialize;
+use serde_json::{Value, json};
+use uuid::Uuid;
 use std::sync::Arc;
 use tokio::{
     select,
@@ -19,10 +21,24 @@ use crate::{BASE_URL, WS_URL, event::EventDispatcher};
 use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
 use crate::error::{LoginError, LoginErrorType};
 
+struct RawMessage {
+    pub code: i32,
+    pub json: String
+}
+impl RawMessage {
+    fn from_raw(raw_string: &str) -> Self {
+        lazy_static! {
+            static ref RMRE: Regex = Regex::new("^[0-9]*").unwrap();
+        }
+        let (code, end_index) = RMRE.find(raw_string).map_or((-1, 0), 
+            |m| (m.as_str().parse::<i32>().unwrap_or(-1), m.end()));
+        
+        RawMessage{code, json: (&raw_string[end_index..]).to_string()}
+    }
+}
 
 type WsStream = SplitStream<WebSocketStream<ConnectStream>>;
 type WsSink = SplitSink<WebSocketStream<ConnectStream>, Message>;
-
 
 #[derive(Debug)]
 pub struct HttpClient {
@@ -154,22 +170,15 @@ impl HttpClient {
             }
         }
     }
-
 }
 
+impl HttpClient {
 
-struct RawMessage {
-    pub code: i32,
-    pub json: String
-}
-impl RawMessage {
-    fn from_raw(raw_string: &str) -> Self {
-        lazy_static! {
-            static ref RMRE: Regex = Regex::new("^[0-9]*").unwrap();
-        }
-        let (code, end_index) = RMRE.find(raw_string).map_or((-1, 0), 
-            |m| (m.as_str().parse::<i32>().unwrap_or(-1), m.end()));
-        
-        RawMessage{code, json: (&raw_string[end_index..]).to_string()}
+    pub async fn send_message(&self, channel_id: &str, message: impl Serialize) -> Result<(), ()> {
+        let body = json!({"messageId": Uuid::new_v4(), "content": message});
+        let result = self.http_client.post(format!("{0}/channels/{1}/messages", BASE_URL, channel_id))
+            .json(&body).send().await;
+        Ok(())
     }
+
 }
