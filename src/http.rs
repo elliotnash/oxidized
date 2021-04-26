@@ -16,17 +16,7 @@ use async_tungstenite::{WebSocketStream, tokio::ConnectStream, tungstenite::{
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
-use crate::{
-    BASE_URL,
-    WS_URL,
-    error::{
-        LoginError,
-        ConnectionError,
-        InvalidCredentials,
-        ServerError
-    },
-    event::EventDispatcher
-};
+use crate::{BASE_URL, WS_URL, error::{ConnectionError, HttpError, InvalidCredentials, LoginError, ServerError}, event::EventDispatcher};
 
 use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
 
@@ -183,11 +173,17 @@ impl HttpClient {
 
 impl HttpClient {
 
-    pub async fn send_message(&self, channel_id: &str, message: impl Serialize) -> Result<(), ()> {
+    pub async fn send_message(&self, channel_id: &str, message: impl Serialize) -> Result<(), HttpError> {
         let body = json!({"messageId": Uuid::new_v4(), "content": message});
         let result = self.http_client.post(format!("{0}/channels/{1}/messages", BASE_URL, channel_id))
             .json(&body).send().await;
-        Ok(())
+        result.map_or(Err(HttpError::ServerError(ServerError{})), |r| {
+            let code = r.status().as_u16();
+            if code == 200 {Ok(())} 
+            else {
+            Err(HttpError::from_code(code))
+            }
+        })
     }
 
 }
