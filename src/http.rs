@@ -16,10 +16,19 @@ use async_tungstenite::{WebSocketStream, tokio::ConnectStream, tungstenite::{
 use futures::{prelude::*, stream::{SplitSink, SplitStream}};
 use regex::Regex;
 use lazy_static::lazy_static;
-use crate::{BASE_URL, WS_URL, event::EventDispatcher};
+use crate::{
+    BASE_URL,
+    WS_URL,
+    error::{
+        LoginError,
+        ConnectionError,
+        InvalidCredentials,
+        ServerError
+    },
+    event::EventDispatcher
+};
 
 use crate::models::{ClientUser, ClientUserRoot, Credentials, EventType, Hello};
-use crate::error::{LoginError, LoginErrorType};
 
 struct RawMessage {
     pub code: i32,
@@ -61,22 +70,22 @@ impl HttpClient {
                         Ok(response)
                     }
                     StatusCode::BAD_REQUEST => {
-                        Err(LoginError{error_type: LoginErrorType::InvalidCredentials})
+                        Err(LoginError::InvalidCredentials(InvalidCredentials{}))
                     }
                     code => {
                         debug!("Connection to guilded returned: {}", code);
-                        Err(LoginError{error_type: LoginErrorType::ServerError})
+                        Err(LoginError::ServerError(ServerError{}))
                     }
                 }
             }
             Err(error) => {
                 debug!("Connection error:\n{}", error);
                 if let Some(_) = error.status() {
-                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
+                    Err(LoginError::ConnectionError(ConnectionError{}))
                 } else if error.is_timeout() {
-                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
+                    Err(LoginError::ConnectionError(ConnectionError{}))
                 } else {
-                    Err(LoginError{error_type: LoginErrorType::ConnectionError})
+                    Err(LoginError::ConnectionError(ConnectionError{}))
                 }
             }
         }

@@ -1,17 +1,11 @@
 use std::sync::Arc;
 
 use tokio::time::{Duration, sleep};
-use crate::{
-    error::{
-        LoginError,
-        LoginErrorType
-    },
-    event::{
+use crate::{error::{ConnectionError, LoginError}, event::{
         EventHandler,
         EventDispatcher,
         DefaultHandler
-    }
-};
+    }};
 use tracing::info;
 
 use crate::http::HttpClient;
@@ -69,7 +63,7 @@ impl ClientBuilder{
         self
     }
     pub async fn login(&self) -> Result<Client, LoginError> {
-        let cred = self.credentials.clone().ok_or(LoginError{error_type: LoginErrorType::ConnectionError})?;
+        let cred = self.credentials.clone().ok_or(LoginError::ConnectionError(ConnectionError{}))?;
         let dispatcher = if let Some(handler) = self.event_handler.clone() {
             EventDispatcher{handler}
         } else {
