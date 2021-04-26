@@ -1,7 +1,5 @@
 use std::{error::Error, fmt::Display};
 
-use reqwest::StatusCode;
-
 #[derive(Debug, Clone)]
 pub enum LoginError {
     InvalidCredentials(InvalidCredentials),
