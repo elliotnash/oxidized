@@ -2,7 +2,7 @@ use oxidized::{
     client::ClientBuilder,
     event::EventHandler,
     models::{
-        message::ChatMessageCreated,
+        message::Message,
         context::Context
     },
     async_trait
@@ -11,7 +11,7 @@ use oxidized::{
 struct Events;
 #[async_trait]
 impl EventHandler for Events {
-    async fn on_message(&self, ctx: Context, event: ChatMessageCreated) {
+    async fn on_message(&self, ctx: Context, event: Message) {
         tracing::info!("RECIEVED MESSAGE EVENT");
     }
 }
