@@ -19,7 +19,7 @@ pub(crate) struct EventDispatcher {
 }
 impl Debug for EventDispatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "handler: Arc<dyn EventHandler>")
+        write!(f, "{{handler: Arc<dyn EventHandler>}}")
     }
 }
 impl EventDispatcher {
@@ -32,7 +32,7 @@ impl EventDispatcher {
     async fn dispatcher(&self, http: Arc<HttpClient>, event_type: EventType, event: Value) -> Result<(), Error> {
         match event_type {
             EventType::ChatMessageCreated => {
-                let event = serde_json::from_value::<ChatMessageCreated>(event)?;
+                let event = serde_json::from_value::<ChatMessageCreated>(event)?.fill_message();
                 let ctx = Context{http};
                 self.handler.on_message(ctx, event).await;
                 Ok(())

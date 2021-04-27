@@ -20,6 +20,14 @@ pub struct ChatMessageCreated {
     pub message: Message,
     pub team_id: String
 }
+impl ChatMessageCreated {
+    pub fn fill_message(mut self) -> Self {
+        self.message.team_id = Some(self.team_id.clone());
+        self.message.channel_id = Some(self.channel_id.clone());
+        self.message.channel_category_id = self.channel_category_id.clone();
+        self
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -30,7 +38,10 @@ pub struct Message {
     pub created_by: String,
     pub id: String,
     #[serde(rename = "type")]
-    pub message_type: String
+    pub message_type: String,
+    pub team_id: Option<String>,
+    pub channel_id: Option<String>,
+    pub channel_category_id: Option<i32>
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
